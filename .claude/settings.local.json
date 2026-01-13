@@ -1,0 +1,36 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npx create-next-app:*)",
+      "Bash(npm install:*)",
+      "Bash(npx shadcn@latest init:*)",
+      "Bash(npx shadcn@latest add:*)",
+      "Bash(npm run build:*)",
+      "Bash(node scripts/generate-icons.js:*)",
+      "Bash(curl:*)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "Bash(cat:*)",
+      "mcp__plugin_playwright_playwright__browser_close",
+      "Bash(taskkill /F /PID 14192)",
+      "Bash(npx kill-port:*)",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "Bash(npx tsc:*)",
+      "Bash(npm test:*)",
+      "Bash(ren \"E:\\\\Aplicación spotify\\\\src\\\\__tests__\\\\setup.ts\" \"setup.tsx\")",
+      "Bash(npm run test:coverage:*)",
+      "WebFetch(domain:www.henryorellana.com)",
+      "Bash(ls:*)",
+      "Bash(xargs cat:*)",
+      "Skill(frontend-design)",
+      "Bash(tasklist:*)",
+      "Bash(taskkill /F /PID 29156)",
+      "Bash(taskkill /F /PID 37584)",
+      "Bash(powershell -Command \"Stop-Process -Id 29156 -Force\")",
+      "Bash(dir /b:*)",
+      "Bash(git init:*)",
+      "Bash(git branch:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ]
+  }
+}
