@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -40,7 +40,7 @@ export default function ContentDetailPage() {
   const [content, setContent] = useState<Content | null>(null);
   const [isFavorite, setIsFavorite] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   const contentId = params.id as string;
   const isCurrentTrack = currentTrack?.id === contentId;

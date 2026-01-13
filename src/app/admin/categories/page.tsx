@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -37,7 +37,7 @@ export default function CategoriesPage() {
     description: '',
     is_active: true,
   });
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   useEffect(() => {
     fetchCategories();

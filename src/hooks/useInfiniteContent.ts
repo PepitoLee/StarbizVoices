@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import type { Content } from '@/types';
 
 const PAGE_SIZE = 12;
@@ -25,7 +25,7 @@ export function useInfiniteContent(contentType: ContentType): UseInfiniteContent
   const [error, setError] = useState<Error | null>(null);
 
   const fetchPage = useCallback(async (offset: number): Promise<Content[]> => {
-    const supabase = createClient();
+    const supabase = getSupabaseClient();
 
     const { data, error: fetchError } = await supabase
       .from('content')

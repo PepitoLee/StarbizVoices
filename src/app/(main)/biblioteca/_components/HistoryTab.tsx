@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { ContentCard } from '@/components/content/ContentCard';
 import { ContentCardSkeleton } from '@/components/content/ContentCardSkeleton';
 import { Button } from '@/components/ui/button';
@@ -21,7 +21,7 @@ export function HistoryTab({ totalCount }: HistoryTabProps) {
   useEffect(() => {
     async function fetchHistory() {
       try {
-        const supabase = createClient();
+        const supabase = getSupabaseClient();
         const { data: { user } } = await supabase.auth.getUser();
 
         if (!user) {

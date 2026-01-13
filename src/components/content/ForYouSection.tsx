@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { ContentCard } from './ContentCard';
 import { ContentCardSkeleton } from './ContentCardSkeleton';
 import { useUserPreferences, interestToCategorySlug, durationMap } from '@/hooks/useUserPreferences';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { ChevronRight, Sparkles, UserCircle } from 'lucide-react';
 import Link from 'next/link';
@@ -23,7 +23,7 @@ export function ForYouSection() {
       }
 
       try {
-        const supabase = createClient();
+        const supabase = getSupabaseClient();
 
         // Get category slugs from interests
         const categorySlugs = preferences.interests

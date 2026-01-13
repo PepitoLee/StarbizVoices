@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createClient } from '@/lib/supabase/client';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import { ContentCard } from '@/components/content/ContentCard';
 import { Button } from '@/components/ui/button';
 import { Download, ChevronLeft, Trash2 } from 'lucide-react';
@@ -13,7 +13,7 @@ export default function DownloadsPage() {
   const { user } = useAuth();
   const [downloads, setDownloads] = useState<Content[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const supabase = createClient();
+  const supabase = getSupabaseClient();
 
   useEffect(() => {
     async function fetchDownloads() {
