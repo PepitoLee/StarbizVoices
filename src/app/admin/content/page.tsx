@@ -1,4 +1,7 @@
-import { createClient } from '@/lib/supabase/server';
+'use client';
+
+import { useState, useEffect } from 'react';
+import { getSupabaseClient } from '@/lib/supabase/client';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,11 +14,8 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Plus, Music, Mic, FileText, Eye, EyeOff } from 'lucide-react';
-
-export const metadata = {
-  title: 'Contenido',
-};
+import { Plus, Music, Mic, FileText, Eye, EyeOff, Trash2, Loader2 } from 'lucide-react';
+import type { Content } from '@/types';
 
 const contentTypeIcons = {
   audio: Music,
@@ -23,17 +23,77 @@ const contentTypeIcons = {
   pdf: FileText,
 };
 
-async function getContent() {
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from('content')
-    .select('*, category:categories(name)')
-    .order('created_at', { ascending: false });
-  return data || [];
-}
+export default function ContentListPage() {
+  const [content, setContent] = useState<Content[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const supabase = getSupabaseClient();
 
-export default async function ContentListPage() {
-  const content = await getContent();
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
+  async function fetchContent() {
+    const { data } = await supabase
+      .from('content')
+      .select('*, category:categories(name)')
+      .order('created_at', { ascending: false });
+    setContent(data || []);
+    setIsLoading(false);
+  }
+
+  async function deleteContent(item: Content) {
+    if (!confirm(`¿Estás seguro de eliminar "${item.title}"? Esta acción no se puede deshacer.`)) {
+      return;
+    }
+
+    setDeletingId(item.id);
+
+    try {
+      // 1. Delete file from Storage
+      if (item.file_url) {
+        const bucket = item.content_type === 'pdf' ? 'pdf-files' : 'audio-files';
+        // Extract path from URL (format: .../storage/v1/object/public/bucket/path)
+        const urlParts = item.file_url.split(`/storage/v1/object/public/${bucket}/`);
+        if (urlParts.length > 1) {
+          const filePath = urlParts[1];
+          await supabase.storage.from(bucket).remove([filePath]);
+        }
+      }
+
+      // 2. Delete thumbnail from Storage if exists
+      if (item.thumbnail_url) {
+        const urlParts = item.thumbnail_url.split('/storage/v1/object/public/thumbnails/');
+        if (urlParts.length > 1) {
+          const thumbPath = urlParts[1];
+          await supabase.storage.from('thumbnails').remove([thumbPath]);
+        }
+      }
+
+      // 3. Delete record from database
+      const { error } = await supabase.from('content').delete().eq('id', item.id);
+
+      if (error) {
+        throw error;
+      }
+
+      // 4. Refresh list
+      fetchContent();
+    } catch (error) {
+      console.error('Error deleting content:', error);
+      alert('Error al eliminar el contenido. Por favor intenta de nuevo.');
+    } finally {
+      setDeletingId(null);
+    }
+  }
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -64,11 +124,13 @@ export default async function ContentListPage() {
                 <TableHead>Duración</TableHead>
                 <TableHead>Estado</TableHead>
                 <TableHead>Fecha</TableHead>
+                <TableHead className="w-20">Acciones</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {content.map((item) => {
                 const Icon = contentTypeIcons[item.content_type as keyof typeof contentTypeIcons];
+                const isDeleting = deletingId === item.id;
                 return (
                   <TableRow key={item.id}>
                     <TableCell>
@@ -110,6 +172,21 @@ export default async function ContentListPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground">
                       {formatDate(item.created_at)}
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => deleteContent(item)}
+                        disabled={isDeleting}
+                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                      >
+                        {isDeleting ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-4 w-4" />
+                        )}
+                      </Button>
                     </TableCell>
                   </TableRow>
                 );
