@@ -40,13 +40,8 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (request.method !== 'GET') return;
 
-  // Skip cross-origin requests except for audio files
+  // Skip ALL cross-origin requests - let browser handle Supabase storage
   if (url.origin !== self.location.origin) {
-    // Handle audio files from Supabase storage
-    if (request.url.includes('supabase') && request.url.includes('audio')) {
-      event.respondWith(handleAudioRequest(request));
-      return;
-    }
     return;
   }
 
