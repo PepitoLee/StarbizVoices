@@ -152,6 +152,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const howlRef = useRef<Howl | null>(null);
   const progressIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs para evitar stale closures
+  const isPlayingRef = useRef(false);
+  const shouldAutoPlayRef = useRef(false);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -163,6 +167,11 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       }
     };
   }, []);
+
+  // Sincronizar ref con estado para evitar stale closure en callbacks
+  useEffect(() => {
+    isPlayingRef.current = state.isPlaying;
+  }, [state.isPlaying]);
 
   // Load new track when currentTrack changes
   useEffect(() => {
@@ -189,9 +198,25 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           type: 'SET_DURATION',
           payload: howlRef.current?.duration() ?? 0,
         });
+
+        // Auto-play cuando Howl está listo si shouldAutoPlay está activo
+        if (shouldAutoPlayRef.current) {
+          shouldAutoPlayRef.current = false;
+          const playPromise = howlRef.current?.play();
+          // Manejar Promise para políticas de autoplay del navegador
+          if (playPromise && typeof playPromise === 'number') {
+            // Howler retorna sound ID, no Promise - ya está reproduciendo
+          }
+        }
       },
       onplay: () => {
         dispatch({ type: 'SET_PLAYING', payload: true });
+
+        // Limpiar intervalo anterior antes de crear uno nuevo (evita stacking)
+        if (progressIntervalRef.current) {
+          clearInterval(progressIntervalRef.current);
+        }
+
         // Update progress periodically
         progressIntervalRef.current = setInterval(() => {
           if (howlRef.current) {
@@ -216,6 +241,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
           howlRef.current?.seek(0);
           howlRef.current?.play();
         } else {
+          // Marcar para auto-reproducir el siguiente track
+          shouldAutoPlayRef.current = true;
           dispatch({ type: 'NEXT_TRACK' });
         }
       },
@@ -243,10 +270,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       },
     });
 
-    // Auto-play if was playing
-    if (state.isPlaying) {
-      howlRef.current.play();
-    }
+    // Nota: El auto-play ahora se maneja en onload via shouldAutoPlayRef
+    // Esto evita race conditions donde play() se llama antes de que Howl esté listo
   }, [state.currentTrack?.id]);
 
   // Update volume when it changes
@@ -291,14 +316,18 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const play = useCallback((content?: Content) => {
     if (content) {
+      // Marcar que debe auto-reproducir cuando Howl esté listo
+      shouldAutoPlayRef.current = true;
+      dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_TRACK', payload: content });
       dispatch({
         type: 'SET_QUEUE',
         payload: [{ id: nanoid(), content, addedAt: Date.now() }],
       });
       dispatch({ type: 'SET_CURRENT_INDEX', payload: 0 });
-    } else {
-      howlRef.current?.play();
+    } else if (howlRef.current) {
+      // Reproducir track actual si ya está cargado
+      howlRef.current.play();
     }
   }, []);
 
@@ -307,12 +336,15 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const toggle = useCallback(() => {
-    if (state.isPlaying) {
-      howlRef.current?.pause();
+    if (!howlRef.current) return;
+
+    // Usar ref en lugar de state para evitar stale closure
+    if (isPlayingRef.current) {
+      howlRef.current.pause();
     } else {
-      howlRef.current?.play();
+      howlRef.current.play();
     }
-  }, [state.isPlaying]);
+  }, []); // Sin dependencias - usa refs
 
   const seek = useCallback((time: number) => {
     if (howlRef.current) {
@@ -352,6 +384,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   }, [state.isMuted]);
 
   const next = useCallback(() => {
+    // Marcar para auto-reproducir el siguiente track
+    shouldAutoPlayRef.current = true;
     dispatch({ type: 'NEXT_TRACK' });
   }, []);
 
@@ -360,6 +394,8 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     if (state.progress > 3) {
       seek(0);
     } else {
+      // Marcar para auto-reproducir el track anterior
+      shouldAutoPlayRef.current = true;
       dispatch({ type: 'PREV_TRACK' });
     }
   }, [state.progress, seek]);
@@ -381,6 +417,10 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
 
   const playPlaylist = useCallback(
     (contents: Content[], startIndex: number = 0) => {
+      // Marcar que debe auto-reproducir cuando Howl esté listo
+      shouldAutoPlayRef.current = true;
+      dispatch({ type: 'SET_LOADING', payload: true });
+
       const queue: QueueItem[] = contents.map((content) => ({
         id: nanoid(),
         content,
