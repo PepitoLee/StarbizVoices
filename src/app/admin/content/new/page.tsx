@@ -92,15 +92,22 @@ export default function NewContentPage() {
         const thumbExt = thumbnailFile.name.split('.').pop();
         const thumbPath = `${crypto.randomUUID()}.${thumbExt}`;
 
+        console.log('Uploading thumbnail to bucket: thumbnails, path:', thumbPath);
+
         const { error: thumbError } = await supabase.storage
           .from('thumbnails')
           .upload(thumbPath, thumbnailFile);
 
-        if (!thumbError) {
+        if (thumbError) {
+          console.error('Thumbnail upload error:', JSON.stringify(thumbError, null, 2));
+          // Mostrar error pero continuar con la subida del contenido
+          alert(`Advertencia: Error al subir imagen de portada: ${thumbError.message}. El contenido se creará sin imagen.`);
+        } else {
           const {
             data: { publicUrl },
           } = supabase.storage.from('thumbnails').getPublicUrl(thumbPath);
           thumbnailUrl = publicUrl;
+          console.log('Thumbnail uploaded successfully:', thumbnailUrl);
         }
       }
 
