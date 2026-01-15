@@ -18,6 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronLeft, Upload, Loader2, Music, Mic, FileText } from 'lucide-react';
 import Link from 'next/link';
+import imageCompression from 'browser-image-compression';
 import type { Category } from '@/types';
 
 export default function NewContentPage() {
@@ -88,15 +89,35 @@ export default function NewContentPage() {
       // Upload thumbnail if provided
       let thumbnailUrl = null;
       if (thumbnailFile) {
+        setUploadProgress('Comprimiendo imagen de portada...');
+
+        // Comprimir imagen antes de subir (máximo 1MB, 1200px)
+        const compressionOptions = {
+          maxSizeMB: 1,
+          maxWidthOrHeight: 1200,
+          useWebWorker: true,
+          fileType: 'image/jpeg' as const,
+        };
+
+        let compressedFile: File;
+        try {
+          compressedFile = await imageCompression(thumbnailFile, compressionOptions);
+          console.log(`Imagen comprimida: ${(thumbnailFile.size / 1024 / 1024).toFixed(2)}MB → ${(compressedFile.size / 1024 / 1024).toFixed(2)}MB`);
+        } catch (compressError) {
+          console.error('Error comprimiendo imagen:', compressError);
+          compressedFile = thumbnailFile; // Usar original si falla compresión
+        }
+
         setUploadProgress('Subiendo imagen de portada...');
-        const thumbExt = thumbnailFile.name.split('.').pop();
-        const thumbPath = `${crypto.randomUUID()}.${thumbExt}`;
+        const thumbPath = `${crypto.randomUUID()}.jpg`;
 
         console.log('Uploading thumbnail to bucket: thumbnails, path:', thumbPath);
 
         const { error: thumbError } = await supabase.storage
           .from('thumbnails')
-          .upload(thumbPath, thumbnailFile);
+          .upload(thumbPath, compressedFile, {
+            contentType: 'image/jpeg',
+          });
 
         if (thumbError) {
           console.error('Thumbnail upload error:', JSON.stringify(thumbError, null, 2));
